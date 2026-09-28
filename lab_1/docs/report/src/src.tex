@@ -1,0 +1,142 @@
+\section{Описание программы}
+
+\subsection{Архитектура проекта}
+
+Логика программы разделена на два модуля, что обеспечивает требование о чистых
+функциях и позволяет тестировать их без ввода-вывода:
+
+\begin{itemize}
+  \item \texttt{array\_ops.cpp} реализует операции над динамическим массивом
+        \texttt{int*} --- создание, изменение и освобождение, --- не обращаясь
+        к \texttt{std::cin}; выводом занимается только \texttt{array\_print};
+  \item \texttt{main.cpp} содержит текстовое меню, чтение и проверку ввода,
+        обработку ошибок и вызов функций \texttt{array\_ops}.
+\end{itemize}
+
+Указатель и его длина хранятся в \texttt{main} как \texttt{int* arr} и
+\texttt{std::size\_t size}. Операции, изменяющие длину, получают
+\texttt{std::size\_t\& size} как out-параметр: функции
+\texttt{array\_insert} и \texttt{array\_remove} обновляют длину по ссылке.
+Функция поиска \texttt{array\_binary\_search} возвращает \texttt{bool}, а
+найденный индекс передаётся через out-параметр
+\texttt{std::size\_t\& out\_index}.
+
+\subsection{Состав функций}
+
+\begin{table}[htbp]
+\centering
+\caption{Чистые функции модуля \texttt{array\_ops}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.96\textwidth}@{}}
+\hline
+\textbf{Сигнатура} \\
+\hline
+\texttt{int* array\_create(std::size\_t size)} \\
+\texttt{void array\_delete(int*\& arr)} \\
+\texttt{int* array\_resize(int* arr, std::size\_t size, std::size\_t new\_size)} \\
+\texttt{int* array\_insert(int* arr, std::size\_t\& size, std::size\_t pos, int value)} \\
+\texttt{int* array\_remove(int* arr, std::size\_t\& size, std::size\_t pos)} \\
+\texttt{void array\_print(const int* arr, std::size\_t size)} \\
+\texttt{void array\_selection\_sort(int* arr, std::size\_t size)} \\
+\texttt{void array\_reverse(int* arr, std::size\_t size)} \\
+\texttt{bool array\_binary\_search(const int* arr, std::size\_t size, int target,} \texttt{std::size\_t\& out\_index)} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Алгоритм варианта}
+
+Пункт~7 выполняет сортировку выбором по возрастанию, затем разворот массива
+двумя указателями. Сортировка перебирает позиции \texttt{i} и находит индекс
+минимума на отрезке \texttt{[i, size)}, меняя \texttt{arr[i]} и
+\texttt{arr[minInd]} местами через временную переменную. Разворот сдвигает
+указатели \texttt{left} и \texttt{right} к центру, обменивая
+\texttt{arr[left]} и \texttt{arr[right]} до их встречи.
+
+\subsection{Состав меню}
+
+Меню соответствует семейству~A, дополнено пунктом~8 для демонстрации поиска:
+
+\begin{table}[htbp]
+\centering
+\caption{Пункты меню}
+\begin{tabular}{@{}r@{\quad}>{\raggedright\arraybackslash}p{4.3cm}@{\qquad}r@{\quad}>{\raggedright\arraybackslash}p{5.2cm}@{}}
+\hline
+1 & Создать массив & 5 & Изменить размер \\
+2 & Напечатать & 6 & Печать \\
+3 & Вставить элемент & 7 & Алгоритм варианта \\
+4 & Удалить элемент & 8 & Бинарный поиск \\
+  & & 0 & Выход \\
+\hline
+\end{tabular}
+\end{table}
+
+Пункт~8 является осознанным расширением меню семейства~A: цель работы прямо
+требует «алгоритм варианта и поиск с возвратом результата и найденного значения
+по ссылке», а обязательная функция семейства --- это
+\texttt{array\_binary\_search}. Чтобы поиск выполнялся на упорядоченных данных,
+пункт~8 создаёт копию массива, сортирует её выбором и выполняет бинарный поиск
+по копии, не изменяя исходный массив. Копия освобождается сразу после поиска.
+
+\subsection{Ввод, ошибки и владение памятью}
+
+\begin{itemize}
+  \item Размеры и позиции вводятся во временную переменную типа
+        \texttt{long long} и проверяются на отрицательность до приведения к
+        \texttt{std::size\_t}. Это исключает переполнение при преобразовании
+        отрицательного числа в беззнаковый тип.
+  \item Чтение выполняется через функции \texttt{readLongLong} и
+        \texttt{readInt}, которые проверяют результат \texttt{std::cin} и при
+        ошибке вызывают \texttt{clearInput()}: сбрасывают флаги состояния и
+        \texttt{std::cin.ignore} до конца строки. Проверка
+        \texttt{std::cin.eof()} при выборе пункта меню завершает программу
+        штатно, поэтому перенаправление ввода из файла или пайпа не приводит к
+        зацикливанию.
+  \item Операции, выделяющие память (создание, вставка, удаление, изменение
+        размера, копия для поиска), обёрнуты в \texttt{try/catch} по
+        \texttt{std::bad\_alloc}. При нехватке памяти выводится сообщение, а
+        исходный массив и его длина остаются неизменными.
+  \item Каждая операция выводит результат: сам массив и новую длину. При
+        вставке за конец выводится предупреждение и фактическая позиция
+        вставки. При удалении позиции вне диапазона выводится допустимый
+        диапазон, и массив не изменяется.
+  \item Функции, изменяющие длину, работают по принципу «сначала новая память,
+        затем копирование, затем \texttt{delete[]} старой». Поэтому при
+        успешном выделении памяти исключение внутри функции уже не может
+        привести к утечке. \texttt{array\_delete} обнуляет указатель.
+\end{itemize}
+
+\subsection{Сборка и запуск}
+
+Проект собирается out-of-source через CMake: библиотека \texttt{array\_ops},
+исполняемый файл \texttt{main} и тест \texttt{test\_variant}. Google Test
+подключается через \texttt{FetchContent} (версия 1.14.0), тесты регистрируются
+в CTest командой \texttt{gtest\_discover\_tests}.
+
+\begin{lstlisting}[style=cmakestyle,caption={Сборка и запуск},numbers=none]
+cmake -S . -B build
+cmake --build build
+./build/main
+ctest --test-dir build --output-on-failure
+\end{lstlisting}
+
+\subsection{Исходный код}
+
+\subsubsection{Система сборки}
+
+\lstinputlisting[style=cmakestyle,caption={CMakeLists.txt}]{../../CMakeLists.txt}
+
+\subsubsection{Заголовочный файл}
+
+\lstinputlisting[style=cppstyle,caption={src/array\_ops.h}]{../../src/array_ops.h}
+
+\subsubsection{Реализация операций}
+
+\lstinputlisting[style=cppstyle,caption={src/array\_ops.cpp}]{../../src/array_ops.cpp}
+
+\subsubsection{Точка входа}
+
+\lstinputlisting[style=cppstyle,caption={src/main.cpp}]{../../src/main.cpp}
+
+\subsubsection{Тесты}
+
+\lstinputlisting[style=cppstyle,caption={tests/test\_variant.cpp}]{../../tests/test_variant.cpp}
