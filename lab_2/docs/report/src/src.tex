@@ -1,0 +1,75 @@
+\section{Описание программы}
+
+\subsection{Архитектура проекта}
+
+Программа реализована на основе класса \texttt{Polynomial}, обеспечивающего работу с многочленом через динамический массив коэффициентов \texttt{double*}. Коэффициенты хранятся по степеням: \texttt{A[0]} — свободный член, \texttt{A[i]} — коэффициент при $x^i$. Управление памятью осуществляется вручную через \texttt{new[]}/\texttt{delete[]}, соблюдается RAII.
+
+\subsection{Состав класса}
+
+Класс \texttt{Polynomial} содержит:
+
+\begin{table}[htbp]
+\centering
+\caption{Методы класса \texttt{Polynomial}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.96\textwidth}@{}}
+\hline
+\textbf{Сигнатура} \\
+\hline
+\texttt{Polynomial(const double* data, int degree)} \\
+\texttt{Polynomial(const Polynomial\& other)} \\
+\texttt{Polynomial(Polynomial\&\& other) noexcept} \\
+\texttt{Polynomial\& operator=(Polynomial other) noexcept} \\
+\texttt{\~{}Polynomial()} \\
+\texttt{void print(std::ostream\& os) const} \\
+\texttt{double evaluate(double in) const} \\
+\texttt{void evaluate\_many(const double* xs, double* ys, size\_t n) const} \\
+\texttt{void add(const Polynomial\& other)} \\
+\texttt{void mul(const Polynomial\& other)} \\
+\hline
+\end{tabular}
+\end{table}
+
+Вспомогательные методы: \texttt{void trim()} (удаление старших нулевых коэффициентов), \texttt{void swap(Polynomial\& other) noexcept}.
+
+\subsection{Особенности реализации}
+
+\begin{itemize}
+  \item Старшие нулевые коэффициенты отбрасываются методом \texttt{trim()} после операций, что исключает хранение лишних членов.
+  \item При всех коэффициентах, равных нулю, многочлен считается пустым (\texttt{degree\_ = -1}, \texttt{data\_ = nullptr}).
+  \item Оператор присваивания реализован через copy-and-swap.
+  \item Конструктор копирования выполняет глубокое копирование.
+  \item Перемещающий конструктор передаёт владение памятью без копирования.
+\end{itemize}
+
+\subsection{Сборка и запуск}
+
+Проект собирается out-of-source через CMake: статическая библиотека \texttt{polynomial}, исполняемый файл \texttt{main} и тестовый исполняемый файл \texttt{test\_polynomial}. Google Test подключается через \texttt{FetchContent} (версия 1.14.0), тесты регистрируются в CTest командой \texttt{gtest\_discover\_tests}.
+
+\begin{lstlisting}[style=cmakestyle,caption={Сборка и запуск},numbers=none]
+cmake -S . -B build
+cmake --build build
+./build/main
+ctest --test-dir build --output-on-failure
+\end{lstlisting}
+
+\subsection{Исходный код}
+
+\subsubsection{Система сборки}
+
+\lstinputlisting[style=cmakestyle,caption={CMakeLists.txt}]{../../CMakeLists.txt}
+
+\subsubsection{Заголовочный файл}
+
+\lstinputlisting[style=cppstyle,caption={src/polynomial.h}]{../../src/polynomial.h}
+
+\subsubsection{Реализация класса}
+
+\lstinputlisting[style=cppstyle,caption={src/polynomial.cpp}]{../../src/polynomial.cpp}
+
+\subsubsection{Точка входа}
+
+\lstinputlisting[style=cppstyle,caption={src/main.cpp}]{../../src/main.cpp}
+
+\subsubsection{Тесты}
+
+\lstinputlisting[style=cppstyle,caption={tests/test\_polynomial.cpp}]{../../tests/test_polynomial.cpp}

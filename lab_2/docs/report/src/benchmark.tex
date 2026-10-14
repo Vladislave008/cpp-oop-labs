@@ -1,0 +1,21 @@
+\section{Тестирование}
+
+\subsection{Сборка проекта CMake}
+
+Файл \texttt{CMakeLists.txt} настраивает сборку статической библиотеки \texttt{polynomial}, исполняемого файла \texttt{main} и тестового исполняемого файла \texttt{test\_polynomial}. Google Test подтягивается автоматически через \texttt{FetchContent}.
+
+\lstinputlisting[style=cmakestyle]{../../CMakeLists.txt}
+
+\subsection{Результаты тестирования}
+
+Тесты размещены в \texttt{tests/test\_polynomial.cpp} (27 тестов). Примеры проверяемых сценариев: конструирование из массива, обрезка старших нулевых (\texttt{trim}), обработка пустого/нулевого многочлена, глубокое копирование, перемещение, присваивание, печать, вычисление в точке, вычисление для массива точек, сложение и умножение многочленов.
+
+Сборка и запуск тестов (из корня \texttt{lab\_2}):
+
+\begin{verbatim}
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+\end{verbatim}
+
+Все тесты успешно проходят.

@@ -1,0 +1,23 @@
+# сборки
+**/build*/
+**/out/
+**/bin/
+**/obj/
+
+# IDE
+**/.idea/
+**/.vscode/
+**/*.user
+
+# временные файлы
+**/*.o
+**/*.obj
+**/*.exe
+
+# LaTeX
+**/*.aux
+**/*.out
+**/*.toc
+**/*.log
+**/*.fls
+**/*.fdb_latexmk
