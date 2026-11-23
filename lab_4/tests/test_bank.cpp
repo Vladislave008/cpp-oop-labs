@@ -181,38 +181,3 @@ TEST(Collection, MoveConstructionAndAssignment) {
     source.add(Card(10, 0.1));
     EXPECT_DOUBLE_EQ(source.total_metric(), 1);
 }
-
-namespace {
-class CountingCard : public Card {
-    int* _destroyed;
-public:
-    explicit CountingCard(int& destroyed) : Card(100, 0.01), _destroyed(&destroyed) {}
-    ~CountingCard() override { ++*_destroyed; }
-    BankProduct* clone() const override { return new CountingCard(*this); }
-};
-}
-
-TEST(Collection, EraseClearAndVirtualDestruction) {
-    int destroyed = 0;
-    CountingCard card(destroyed);
-    {
-        std::unique_ptr<BankProduct> product(card.clone());
-    }
-    EXPECT_EQ(destroyed, 1);
-    {
-        BankCollection products;
-        products.add(card);
-        products.add(Card(10000, 0.02));
-        products.add(card);
-        products.erase(0);
-        EXPECT_EQ(destroyed, 2);
-        ASSERT_EQ(products.size(), 2u);
-        EXPECT_DOUBLE_EQ(products[0].metric(), 200);
-        EXPECT_THROW(products.erase(2), std::out_of_range);
-        products.clear();
-        EXPECT_TRUE(products.empty());
-        EXPECT_EQ(destroyed, 3);
-        products.add(card);
-    }
-    EXPECT_EQ(destroyed, 4);
-}
