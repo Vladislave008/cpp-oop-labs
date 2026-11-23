@@ -1,0 +1,19 @@
+\section{Тестирование}
+
+\subsection{Сборка и запуск}
+CMake создаёт библиотеку \texttt{bank\_products}, приложение \texttt{lab\_4} и тесты \texttt{bank\_tests}. Google Test 1.14.0 подключён через \texttt{FetchContent}, тесты зарегистрированы в CTest. Для GCC заданы \texttt{-Wall -Wextra -Wpedantic}, для MSVC --- \texttt{/W4}.
+
+\lstinputlisting[style=cmakestyle]{../../CMakeLists.txt}
+
+Команды для Windows с Visual Studio из каталога \texttt{lab\_4}:
+\begin{verbatim}
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Debug
+.\build\Debug\lab_4.exe
+ctest --test-dir build -C Debug --output-on-failure
+\end{verbatim}
+
+\subsection{Результаты}
+Подготовлено 15 тестов: метрика каждого продукта; специфичные методы и \texttt{dynamic\_cast}; ввод и вывод; ошибочные данные; равенство и приведение; пустая коллекция и индексы; рост и сумма; максимум и равные значения; глубокое копирование и присваивание; перемещение; удаление, очистка и виртуальный деструктор. Все 15 тестов проходят. Сборка MSVC и проверка исходников GCC с заданными предупреждениями проходят без предупреждений.
+
+Демонстрация подтверждает: метрика вклада \texttt{(1000, 0.1, 2, true)} равна 105; после удаления его копии из коллекции исходный вклад остаётся доступным. Чтение того же набора полей из \texttt{std::istringstream} даёт тот же результат.

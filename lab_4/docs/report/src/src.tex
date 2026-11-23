@@ -1,0 +1,95 @@
+\section{Описание программы}
+
+\subsection{Контракт классов}
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.19\linewidth}>{\raggedright\arraybackslash}p{0.36\linewidth}>{\raggedright\arraybackslash}p{0.37\linewidth}@{}}
+\toprule
+Класс & Состояние & Основные операции \\
+\midrule
+\texttt{BankProduct} & Полей нет & \texttt{metric, clone, print, read}; виртуальный деструктор \\
+\texttt{Deposit} & \texttt{sum, rate, years, cumulative} & Метрика вклада; \texttt{isCumulative()} \\
+\texttt{Credit} & \texttt{sum, rate, years, annuity} & Метрика кредита; \texttt{isAnnuity()} \\
+\texttt{Card} & \texttt{spending, rate} & Метрика карты; \texttt{hasCashback()} \\
+\texttt{BankCollection} & \texttt{BankProduct**}, размер, вместимость & \texttt{add, erase, clear, size, empty, operator[], total\_metric, max\_product} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{Deposit}, \texttt{Credit}, \texttt{Card} публично наследуют \texttt{BankProduct}. Методы \texttt{metric()}, \texttt{clone()}, \texttt{print()} и \texttt{read()} сделаны чисто виртуальными: реализация зависит от вида продукта. Переопределения помечены \texttt{override}. Виртуальный деструктор обеспечивает уничтожение наследника через базовый указатель.
+
+Методы вычисления, печати, копирования и проверки признаков объявлены \texttt{const}, поскольку не меняют продукт. Чтение меняет поля и не является \texttt{const}. У коллекции есть константные перегрузки доступа и поиска. Специфичные методы отсутствуют в базе; тесты вызывают их после проверенного \texttt{dynamic\_cast}.
+
+Свободные \texttt{operator<<} и \texttt{operator>>} делегируют виртуальным \texttt{print/read}. Приведение к \texttt{double} возвращает \texttt{metric()}. Равенство определяется условием
+$|a.\mathrm{metric()}-b.\mathrm{metric()}|<10^{-6}$, в том числе для продуктов разных типов. Собственные операции копирования базы не требуются: состояния у неё нет; полиморфные копии создаются через \texttt{clone()}.
+
+\subsection{Формулы и ограничения}
+Для вклада без капитализации $m=\mathrm{sum}\cdot\mathrm{rate}$, с капитализацией:
+\[
+m=\frac{\mathrm{sum}\big((1+\mathrm{rate})^{\mathrm{years}}-1\big)}{\mathrm{years}}.
+\]
+Для обычного кредита $m=\mathrm{sum}\cdot\mathrm{rate}$. Для аннуитетного:
+\[
+r=\frac{\mathrm{rate}}{1200},\qquad n=12\,\mathrm{years},\qquad
+m=12\frac{\mathrm{sum}\cdot r}{1-(1+r)^{-n}}.
+\]
+Для карты $m=\mathrm{spending}\cdot\mathrm{rate}$. Метод \texttt{hasCashback()} возвращает \texttt{rate > 0}; два других специфичных метода возвращают соответствующий логический флаг.
+
+Сумма, расходы и ставка должны быть конечными и неотрицательными. Срок --- положительное целое число лет. Для аннуитетного кредита нулевая ставка запрещена. Неверные параметры конструктора вызывают \texttt{std::invalid\_argument}. Общая проверка принимает \texttt{Params} с полями \texttt{std::optional}; отсутствующие поля пропускаются.
+
+\subsection{Ввод и вывод}
+Ввод по таблице мира E содержит только значения полей:
+\begin{verbatim}
+Deposit: sum rate years cumulative
+Credit:  sum rate years annuity
+Card:    spending rate
+\end{verbatim}
+Имена классов выше обозначают получателя, во входную строку не входят. Флаги принимают 0 или 1. Пример чтения вклада: \texttt{1000 0.1 2 1}. Вывод:
+\begin{verbatim}
+Deposit: sum=1000 rate=0.1 years=2 cumulative=1
+\end{verbatim}
+Метрика выводится приложением отдельно. При ошибке чтения устанавливается \texttt{failbit}, прежние поля сохраняются.
+
+\subsection{Коллекция и владение}
+Коллекция владеет массивом указателей и продуктами внутри него. Метод \texttt{add} принимает константную ссылку на продукт и сохраняет независимую копию через \texttt{clone()}; исходный продукт остаётся у вызывающего кода. Начальная вместимость равна четырём, при заполнении она удваивается с проверкой переполнения. При удалении последующие указатели сдвигаются влево.
+
+Копирующий конструктор создаёт копии во временной коллекции, затем выполняет \texttt{swap}. При исключении временный объект освобождает уже созданные продукты. Перемещающий конструктор забирает массив и оставляет источник пустым. Присваивание принимает аргумент по значению:
+\begin{lstlisting}[style=cppstyle]
+BankCollection& operator=(BankCollection other) noexcept;
+\end{lstlisting}
+Копирование параметра происходит до входа в тело; внутри выполняется только \texttt{swap}. Этот оператор обслуживает копирующее и перемещающее присваивание. Деструктор удаляет каждый продукт через базовый указатель и освобождает массив через \texttt{delete[]}.
+
+Обход выполняется через \texttt{size()} и \texttt{operator[]}; неверный индекс вызывает \texttt{std::out\_of\_range}. \texttt{total\_metric()} и \texttt{max\_product()} имеют сложность $O(n)$. При равных максимумах выбирается первый продукт; пустая коллекция даёт сумму 0 и максимум \texttt{nullptr}. Возвращаемый указатель не передаёт владение.
+
+\subsection{Чек-лист контракта}
+\begin{itemize}
+\item Абстрактная база, виртуальный деструктор, \texttt{virtual/override} и \texttt{const} реализованы.
+\item Потоковые операторы делегируют виртуальным методам; числовое приведение и сравнение метрик реализованы.
+\item У каждого наследника есть специфичный метод; успешное и неуспешное приведение проверяются тестами.
+\item Владение определено; глубокое копирование, перемещение, присваивание и освобождение массива реализованы. Срезки объектов нет.
+\item Ввод и вывод соответствуют таблице мира E.
+\end{itemize}
+
+\subsection{Исходный код}
+\subsubsection{Базовый класс и общие параметры}
+\lstinputlisting[style=cppstyle,caption={src/params.h}]{../../src/params.h}
+\lstinputlisting[style=cppstyle,caption={src/bank.h}]{../../src/bank.h}
+\lstinputlisting[style=cppstyle,caption={src/bank.cpp}]{../../src/bank.cpp}
+
+\subsubsection{Банковские продукты}
+\lstinputlisting[style=cppstyle,caption={src/deposit.h}]{../../src/deposit.h}
+\lstinputlisting[style=cppstyle,caption={src/deposit.cpp}]{../../src/deposit.cpp}
+\lstinputlisting[style=cppstyle,caption={src/credit.h}]{../../src/credit.h}
+\lstinputlisting[style=cppstyle,caption={src/credit.cpp}]{../../src/credit.cpp}
+\lstinputlisting[style=cppstyle,caption={src/card.h}]{../../src/card.h}
+\lstinputlisting[style=cppstyle,caption={src/card.cpp}]{../../src/card.cpp}
+
+\subsubsection{Полиморфная коллекция}
+\lstinputlisting[style=cppstyle,caption={src/bank\_collection.h}]{../../src/bank_collection.h}
+\lstinputlisting[style=cppstyle,caption={src/bank\_collection.cpp}]{../../src/bank_collection.cpp}
+
+\subsubsection{Демонстрационная программа}
+\lstinputlisting[style=cppstyle,caption={src/main.cpp}]{../../src/main.cpp}
+
+\subsubsection{Модульные тесты}
+\lstinputlisting[style=cppstyle,caption={tests/test\_bank.cpp}]{../../tests/test_bank.cpp}
